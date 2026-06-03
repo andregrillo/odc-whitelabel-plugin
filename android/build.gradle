@@ -1,0 +1,5 @@
+apply plugin: 'com.android.library'
+android {
+    namespace "com.outsystems.whitelabel.plugin"
+    compileSdk 34
+}
