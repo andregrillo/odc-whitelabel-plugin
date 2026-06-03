@@ -20,12 +20,24 @@ try {
 }
 
 function applyBranding() {
-    const projectRoot = process.cwd();
+    // In MABS, process.cwd() might be the plugin folder itself.
+    // We need to find the project root (where capacitor.config.json lives).
+    let projectRoot = process.cwd();
+    
+    // Look up to 3 levels up to find the root if needed
+    for (let i = 0; i < 3; i++) {
+        if (fs.existsSync(path.join(projectRoot, 'capacitor.config.json'))) {
+            break;
+        }
+        projectRoot = path.join(projectRoot, '..');
+    }
+    
+    console.log("Whitelabel Plugin: Identified Project Root at: " + projectRoot);
     
     // 2. Detect the current App ID (which was set by the Python script via API)
     const capConfigPath = path.join(projectRoot, 'capacitor.config.json');
     if (!fs.existsSync(capConfigPath)) {
-        console.error("Whitelabel Plugin: capacitor.config.json not found at " + capConfigPath);
+        console.error("Whitelabel Plugin: FATAL - capacitor.config.json not found at " + capConfigPath);
         return;
     }
 
