@@ -7,37 +7,53 @@ const path = require('path');
  * It detects the App ID and injects Brand Name, Icons, and Colors.
  */
 
-// 1. Get configuration from ODC Extensibility Configuration (Preferences)
-// In ODC, these are passed as environment variables to the build process.
-const WHITELABEL_MAP_STR = process.env.WHITELABEL_MAP || "{}";
+// 1. Get configuration
+// We check both process.env and outsystems.config.json (ODC standard)
 let WHITELABEL_MAP = {};
+const projectRoot = getProjectRoot();
 
-try {
-    WHITELABEL_MAP = JSON.parse(WHITELABEL_MAP_STR);
-} catch (e) {
-    console.error("Whitelabel Plugin: FATAL - Could not parse WHITELABEL_MAP. Ensure it is a valid JSON string.");
-    process.exit(0); // Exit gracefully so the build doesn't fail, but log the error
+function getProjectRoot() {
+    let root = process.cwd();
+    for (let i = 0; i < 4; i++) {
+        if (fs.existsSync(path.join(root, 'capacitor.config.json'))) return root;
+        root = path.join(root, '..');
+    }
+    return process.cwd();
 }
 
-function applyBranding() {
-    // In MABS, process.cwd() might be the plugin folder itself.
-    // We need to find the project root (where capacitor.config.json lives).
-    let projectRoot = process.cwd();
-    
-    // Look up to 3 levels up to find the root if needed
-    for (let i = 0; i < 3; i++) {
-        if (fs.existsSync(path.join(projectRoot, 'capacitor.config.json'))) {
-            break;
-        }
-        projectRoot = path.join(projectRoot, '..');
+function loadMap() {
+    // Attempt 1: Standard Environment Variable
+    if (process.env.WHITELABEL_MAP) {
+        try { return JSON.parse(process.env.WHITELABEL_MAP); } catch (e) {}
     }
-    
+
+    // Attempt 2: outsystems.config.json (Most reliable in ODC)
+    const osConfigPath = path.join(projectRoot, 'outsystems.config.json');
+    if (fs.existsSync(osConfigPath)) {
+        try {
+            const osConfig = JSON.parse(fs.readFileSync(osConfigPath, 'utf8'));
+            console.log("Whitelabel Plugin: Searching for map in outsystems.config.json...");
+            
+            // ODC preferences usually end up in appConfigurations.preferences or global
+            const prefs = osConfig.appConfigurations?.preferences?.global || [];
+            const mapPref = prefs.find(p => p.name === 'WHITELABEL_MAP');
+            if (mapPref) return JSON.parse(mapPref.value);
+        } catch (e) {
+            console.error("Whitelabel Plugin: Error reading outsystems.config.json: " + e.message);
+        }
+    }
+    return {};
+}
+
+WHITELABEL_MAP = loadMap();
+
+function applyBranding() {
     console.log("Whitelabel Plugin: Identified Project Root at: " + projectRoot);
     
-    // 2. Detect the current App ID (which was set by the Python script via API)
+    // 2. Detect the current App ID
     const capConfigPath = path.join(projectRoot, 'capacitor.config.json');
     if (!fs.existsSync(capConfigPath)) {
-        console.error("Whitelabel Plugin: FATAL - capacitor.config.json not found at " + capConfigPath);
+        console.error("Whitelabel Plugin: FATAL - capacitor.config.json not found.");
         return;
     }
 
