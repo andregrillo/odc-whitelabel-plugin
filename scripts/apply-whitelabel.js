@@ -31,13 +31,28 @@ function loadMap() {
     const osConfigPath = path.join(projectRoot, 'outsystems.config.json');
     if (fs.existsSync(osConfigPath)) {
         try {
-            const osConfig = JSON.parse(fs.readFileSync(osConfigPath, 'utf8'));
-            console.log("Whitelabel Plugin: Searching for map in outsystems.config.json...");
+            const rawContent = fs.readFileSync(osConfigPath, 'utf8');
+            console.log("Whitelabel Plugin: Found outsystems.config.json. Content:");
+            console.log(rawContent); // DEBUG: Print full config to logs
             
-            // ODC preferences usually end up in appConfigurations.preferences or global
-            const prefs = osConfig.appConfigurations?.preferences?.global || [];
+            const osConfig = JSON.parse(rawContent);
+            
+            // Try different possible paths for preferences in ODC
+            const prefs = 
+                osConfig.appConfigurations?.preferences?.global || 
+                osConfig.preferences?.global || 
+                osConfig.globalPreferences || 
+                [];
+            
+            console.log("Whitelabel Plugin: Found " + prefs.length + " preferences.");
+            
             const mapPref = prefs.find(p => p.name === 'WHITELABEL_MAP');
-            if (mapPref) return JSON.parse(mapPref.value);
+            if (mapPref) {
+                console.log("Whitelabel Plugin: Found WHITELABEL_MAP preference!");
+                return JSON.parse(mapPref.value);
+            } else {
+                console.log("Whitelabel Plugin: WHITELABEL_MAP not found in preferences list.");
+            }
         } catch (e) {
             console.error("Whitelabel Plugin: Error reading outsystems.config.json: " + e.message);
         }
