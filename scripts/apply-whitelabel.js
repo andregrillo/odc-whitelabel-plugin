@@ -22,30 +22,30 @@ function getProjectRoot() {
 }
 
 function loadMap() {
-    // SECURITY: We no longer read from local brands.json to avoid exposing data on GitHub.
-    // We now look for 'WHITELABEL_MAP' in the ODC Build Settings (extensibility-settings).
+    // STRATEGY: Read from capacitor.config.json -> plugins.Whitelabel.map
+    // This is the most reliable way ODC passes plugin data to the build.
+    const capConfigPath = path.join(projectRoot, 'capacitor.config.json');
     
-    // Attempt 1: outsystems.config.json (The primary way ODC passes build settings)
-    const osConfigPath = path.join(projectRoot, 'outsystems.config.json');
-    if (fs.existsSync(osConfigPath)) {
+    if (fs.existsSync(capConfigPath)) {
         try {
-            const rawContent = fs.readFileSync(osConfigPath, 'utf8');
-            const osConfig = JSON.parse(rawContent);
+            const capConfig = JSON.parse(fs.readFileSync(capConfigPath, 'utf8'));
+            console.log("Whitelabel Plugin: Searching for map in capacitor.config.json...");
             
-            console.log("Whitelabel Plugin: Inspecting outsystems.config.json for branding data...");
-            
-            // ODC stores 'extensibility-settings' inside the settings array
-            const settings = osConfig.settings || [];
-            const mapSetting = settings.find(s => s.key === 'WHITELABEL_MAP');
-            
-            if (mapSetting && mapSetting.value) {
-                console.log("Whitelabel Plugin: SUCCESS - Found WHITELABEL_MAP in ODC Settings!");
-                return JSON.parse(mapSetting.value);
+            // Look for our custom config block
+            const pluginConfig = capConfig.plugins?.Whitelabel;
+            if (pluginConfig && pluginConfig.map) {
+                console.log("Whitelabel Plugin: SUCCESS - Found map in capacitor.config.json!");
+                return JSON.parse(pluginConfig.map);
+            } else {
+                console.log("Whitelabel Plugin: Map not found in plugins.Whitelabel.map");
             }
         } catch (e) {
-            console.error("Whitelabel Plugin: Error parsing ODC config: " + e.message);
+            console.error("Whitelabel Plugin: Error parsing capacitor.config.json: " + e.message);
         }
     }
+
+    // Fallback: Attempt 2: outsystems.config.json
+    const osConfigPath = path.join(projectRoot, 'outsystems.config.json');
 
     // Attempt 2: Fallback to environment variable
     if (process.env.WHITELABEL_MAP) {
