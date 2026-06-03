@@ -1,0 +1,20 @@
+{
+  "name": "odc-plugin-whitelabel",
+  "version": "1.0.0",
+  "description": "Modifies App Name, Icon, and Color based on App ID during ODC MABS build",
+  "main": "dist/plugin.js",
+  "scripts": {
+    "capacitor:sync:after": "node scripts/apply-whitelabel.js"
+  },
+  "capacitor": {
+    "android": {
+      "src": "android"
+    },
+    "ios": {
+      "src": "ios"
+    }
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0"
+  }
+}
