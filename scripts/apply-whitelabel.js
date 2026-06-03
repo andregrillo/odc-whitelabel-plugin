@@ -22,51 +22,37 @@ function getProjectRoot() {
 }
 
 function loadMap() {
-    // New Strategy: Read from brands.json directly in the plugin folder
-    // This script is in scripts/, so brands.json is in ../brands.json
-    const brandsPath = path.join(__dirname, '..', 'brands.json');
+    // SECURITY: We no longer read from local brands.json to avoid exposing data on GitHub.
+    // We now look for 'WHITELABEL_MAP' in the ODC Build Settings (extensibility-settings).
     
-    if (fs.existsSync(brandsPath)) {
-        try {
-            console.log("Whitelabel Plugin: Loading brand map from " + brandsPath);
-            return JSON.parse(fs.readFileSync(brandsPath, 'utf8'));
-        } catch (e) {
-            console.error("Whitelabel Plugin: Error reading brands.json: " + e.message);
-        }
-    } else {
-        console.log("Whitelabel Plugin: brands.json not found at " + brandsPath);
-    }
-    
-    // Fallback: Attempt 2: outsystems.config.json (Most reliable in ODC)
+    // Attempt 1: outsystems.config.json (The primary way ODC passes build settings)
     const osConfigPath = path.join(projectRoot, 'outsystems.config.json');
     if (fs.existsSync(osConfigPath)) {
         try {
             const rawContent = fs.readFileSync(osConfigPath, 'utf8');
-            console.log("Whitelabel Plugin: Found outsystems.config.json. Content:");
-            console.log(rawContent); // DEBUG: Print full config to logs
-            
             const osConfig = JSON.parse(rawContent);
             
-            // Try different possible paths for preferences in ODC
-            const prefs = 
-                osConfig.appConfigurations?.preferences?.global || 
-                osConfig.preferences?.global || 
-                osConfig.globalPreferences || 
-                [];
+            console.log("Whitelabel Plugin: Inspecting outsystems.config.json for branding data...");
             
-            console.log("Whitelabel Plugin: Found " + prefs.length + " preferences.");
+            // ODC stores 'extensibility-settings' inside the settings array
+            const settings = osConfig.settings || [];
+            const mapSetting = settings.find(s => s.key === 'WHITELABEL_MAP');
             
-            const mapPref = prefs.find(p => p.name === 'WHITELABEL_MAP');
-            if (mapPref) {
-                console.log("Whitelabel Plugin: Found WHITELABEL_MAP preference!");
-                return JSON.parse(mapPref.value);
-            } else {
-                console.log("Whitelabel Plugin: WHITELABEL_MAP not found in preferences list.");
+            if (mapSetting && mapSetting.value) {
+                console.log("Whitelabel Plugin: SUCCESS - Found WHITELABEL_MAP in ODC Settings!");
+                return JSON.parse(mapSetting.value);
             }
         } catch (e) {
-            console.error("Whitelabel Plugin: Error reading outsystems.config.json: " + e.message);
+            console.error("Whitelabel Plugin: Error parsing ODC config: " + e.message);
         }
     }
+
+    // Attempt 2: Fallback to environment variable
+    if (process.env.WHITELABEL_MAP) {
+        try { return JSON.parse(process.env.WHITELABEL_MAP); } catch (e) {}
+    }
+
+    console.log("Whitelabel Plugin: WARNING - No branding map found. Please ensure WHITELABEL_MAP is set via ODC API.");
     return {};
 }
 
