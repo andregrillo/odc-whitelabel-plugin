@@ -22,37 +22,26 @@ function getProjectRoot() {
 }
 
 function loadMap() {
-    // STRATEGY: Read from capacitor.config.json -> plugins.Whitelabel.map
-    // This is the most reliable way ODC passes plugin data to the build.
+    // FINAL STRATEGY: Read from capacitor.config.json -> plugins.Whitelabel.map
+    // This is the ODC-standard way to pass plugin data.
     const capConfigPath = path.join(projectRoot, 'capacitor.config.json');
     
     if (fs.existsSync(capConfigPath)) {
         try {
             const capConfig = JSON.parse(fs.readFileSync(capConfigPath, 'utf8'));
-            console.log("Whitelabel Plugin: Searching for map in capacitor.config.json...");
+            console.log("Whitelabel Plugin: Reading configuration from capacitor.config.json...");
             
-            // Look for our custom config block
-            const pluginConfig = capConfig.plugins?.Whitelabel;
-            if (pluginConfig && pluginConfig.map) {
-                console.log("Whitelabel Plugin: SUCCESS - Found map in capacitor.config.json!");
-                return JSON.parse(pluginConfig.map);
-            } else {
-                console.log("Whitelabel Plugin: Map not found in plugins.Whitelabel.map");
+            const mapStr = capConfig.plugins?.Whitelabel?.map;
+            if (mapStr) {
+                console.log("Whitelabel Plugin: SUCCESS - Branding map loaded!");
+                return JSON.parse(mapStr);
             }
         } catch (e) {
-            console.error("Whitelabel Plugin: Error parsing capacitor.config.json: " + e.message);
+            console.error("Whitelabel Plugin: Error parsing config: " + e.message);
         }
     }
-
-    // Fallback: Attempt 2: outsystems.config.json
-    const osConfigPath = path.join(projectRoot, 'outsystems.config.json');
-
-    // Attempt 2: Fallback to environment variable
-    if (process.env.WHITELABEL_MAP) {
-        try { return JSON.parse(process.env.WHITELABEL_MAP); } catch (e) {}
-    }
-
-    console.log("Whitelabel Plugin: WARNING - No branding map found. Please ensure WHITELABEL_MAP is set via ODC API.");
+    
+    console.log("Whitelabel Plugin: WARNING - No branding map found in capacitor.config.json plugins section.");
     return {};
 }
 
