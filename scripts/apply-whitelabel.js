@@ -22,12 +22,22 @@ function getProjectRoot() {
 }
 
 function loadMap() {
-    // Attempt 1: Standard Environment Variable
-    if (process.env.WHITELABEL_MAP) {
-        try { return JSON.parse(process.env.WHITELABEL_MAP); } catch (e) {}
+    // New Strategy: Read from brands.json directly in the plugin folder
+    // This script is in scripts/, so brands.json is in ../brands.json
+    const brandsPath = path.join(__dirname, '..', 'brands.json');
+    
+    if (fs.existsSync(brandsPath)) {
+        try {
+            console.log("Whitelabel Plugin: Loading brand map from " + brandsPath);
+            return JSON.parse(fs.readFileSync(brandsPath, 'utf8'));
+        } catch (e) {
+            console.error("Whitelabel Plugin: Error reading brands.json: " + e.message);
+        }
+    } else {
+        console.log("Whitelabel Plugin: brands.json not found at " + brandsPath);
     }
-
-    // Attempt 2: outsystems.config.json (Most reliable in ODC)
+    
+    // Fallback: Attempt 2: outsystems.config.json (Most reliable in ODC)
     const osConfigPath = path.join(projectRoot, 'outsystems.config.json');
     if (fs.existsSync(osConfigPath)) {
         try {

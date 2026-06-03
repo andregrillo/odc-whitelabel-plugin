@@ -1,0 +1,10 @@
+{
+  "com.company.alpha": {
+    "name": "Brand Alpha",
+    "primaryColor": "#4A90E2"
+  },
+  "com.company.beta": {
+    "name": "Brand Beta",
+    "primaryColor": "#F5A623"
+  }
+}
